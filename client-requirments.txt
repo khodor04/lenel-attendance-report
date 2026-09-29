@@ -1,0 +1,52 @@
+r Asif,
+
+ 
+
+As we spoke yesterday, please see attached sample report (second tab of excel).
+
+We want to generate this report automatically on daily basis (12am midnight) and send to recipients automatically by email.
+
+There should also a manual way to select the period and generate the report and save it or send by email.
+
+Report formats must be MS Excel and PDF.
+
+ 
+
+Effective hours means, the person actual time inside the office (except breaks) of same day.
+
+Total hours means, the person total hours from first entry punch and last exit punch of same day.
+
+ 
+
+The raw data source will be Lenel OnGuard Access Control system using MS SQL (express edition). With Win11 Pro OS installed on a desktop computer.
+
+Your application must do all calculations.
+
+ 
+
+We want a very basic and cost-effective application which will be installed only on one computer.
+
+Could you please get back to us with the time and cost.
+
+Records where an individual has been out of the office for more than two hours should be clearly highlighted in the remarks section. (This rule should exclude the period between the last punch of the day and the first punch of the next business day.)
+ 
+
+An additional field is required to capture an attribute that will store the Group Person ID (7-digit number). This information must be displayed within the report.
+ 
+
+Another attribute field is required to capture the company name, as discussed during the meeting with Mujtaba.
+ 
+
+The self-running report should allow filtering by company, with the ability to select more than one company within the same report.
+ 
+
+The system should support creating multiple self-running reports with different configurations. For example:
+Reports configured for specific company groups, sent to designated recipients, with customized report titles / variable mail subject “Maire Daily Report for 19-Jun-26”
+Different execution frequencies, such as daily, weekly, and monthly.
+ 
+
+ 
+
+Please do let us know if everything is clear or do you need further clarifications?  We can adopt an Agile Dev framework where we could have streams validation during the development of the report. (Weekly rhythm is ok for us).
+
+ 

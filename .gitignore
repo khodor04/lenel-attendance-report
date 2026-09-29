@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Build / dist
+build/
+dist/
+*.egg-info/
+
+# Virtual environment
+venv/
+.venv/
+
+# PyInstaller
+*.spec.bak
+
+# Local SQLite config & logs
+*.db
+*.db-shm
+*.db-wal
+*.log
+
+# Local test reports & screenshots
+new/
+
+# Deliverable EXEs (binary, built from source)
+Admin Deliverables/
+Client Deliverables/
+Deliverables/
+*.exe
+
+# Screenshots / sample files / proposals / archives
+*.png
+*.jpg
+*.jpeg
+*.pdf
+*.xlsx
+*.xls
+*.zip
+*.rar
+*.7z
+
+# Claude Code internal
+.claude/
+
+# IDE
+.vscode/
+.idea/
