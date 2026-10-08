@@ -79,25 +79,19 @@ def generate_pdf(records: List[AttendanceRecord], report_title: str,
         Spacer(1, 0.1 * cm),
     ]
 
-    if include_remarks:
-        headers = ['Group\nPerson ID', 'Name', 'Date',
-                   'First\nPunch In', 'Last\nPunch Out',
-                   'Effective\nHours', 'Total\nHours',
-                   'Company\nName', 'Remarks']
-        col_widths = [1.8*cm, 4.5*cm, 2.5*cm, 2.0*cm, 2.0*cm,
-                      2.2*cm, 2.0*cm, 3.5*cm, 5.5*cm]
-    else:
-        headers = ['Group\nPerson ID', 'Name', 'Date',
-                   'First\nPunch In', 'Last\nPunch Out',
-                   'Effective\nHours', 'Total\nHours',
-                   'Company\nName']
-        col_widths = [2.0*cm, 5.5*cm, 2.8*cm, 2.2*cm, 2.2*cm,
-                      2.5*cm, 2.3*cm, 4.2*cm]
+    headers = ['Group\nPerson ID', 'Name', 'Date',
+               'First\nPunch In', 'Last\nPunch Out',
+               'Effective\nHours', 'Total\nHours',
+               'Company\nName', 'Remarks']
+    col_widths = [1.8*cm, 4.5*cm, 2.5*cm, 2.0*cm, 2.0*cm,
+                  2.2*cm, 2.0*cm, 3.5*cm, 5.5*cm]
 
     data = [headers]
     row_fills = []
+    remarks_col = 8
 
     for i, rec in enumerate(records, 1):
+        remarks_text = rec.remarks_str if include_remarks else ''
         row = [
             rec.ssno,
             Paragraph(rec.name, cell_style),
@@ -107,11 +101,9 @@ def generate_pdf(records: List[AttendanceRecord], report_title: str,
             rec.effective_hours_str,
             rec.total_hours_str,
             Paragraph(rec.company_name, cell_style) if rec.company_name else '',
+            Paragraph(remarks_text, cell_style) if remarks_text else '',
         ]
         if include_remarks:
-            remarks_text = rec.remarks_str
-            row.append(Paragraph(remarks_text, cell_style) if remarks_text else '')
-            remarks_col = 8
             if rec.has_out_2hr:
                 row_fills.append(('BACKGROUND', (remarks_col, i), (remarks_col, i), YELLOW))
             elif rec.has_any_remark:

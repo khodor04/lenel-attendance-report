@@ -29,7 +29,10 @@ def _svc_exe() -> str | None:
 
 
 def _run(*args, timeout=15):
-    r = subprocess.run(list(args), capture_output=True, text=True, timeout=timeout)
+    r = subprocess.run(
+        list(args), capture_output=True, text=True, timeout=timeout,
+        creationflags=subprocess.CREATE_NO_WINDOW,
+    )
     return r.returncode == 0, (r.stdout + r.stderr).strip()
 
 

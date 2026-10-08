@@ -467,8 +467,8 @@ class _SystemSettings(ttk.Frame):
                    command=self._stop_and_exit).grid(
             row=29, column=0, columnspan=2, sticky='w')
 
-        self._refresh_status()
-        self._refresh_svc_status()
+        threading.Thread(target=self._refresh_status, daemon=True).start()
+        threading.Thread(target=self._refresh_svc_status, daemon=True).start()
 
     def _refresh_svc_status(self):
         status = svc_manager.get_status()

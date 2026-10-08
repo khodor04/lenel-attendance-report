@@ -143,13 +143,19 @@ def get_events_from_archive_view(start_date: date, end_date: date):
         return _query_ta_view(_ARCHIVE_VIEW, local_start, local_end)
     except Exception as e:
         err = str(e).lower()
-        if 'permission' in err or 'select permission' in err or 'does not have permission' in err:
+        err_str = str(e)
+        is_access_denied = (
+            'permission' in err
+            or 'server principal' in err
+            or '08004' in err_str
+            or 'cannot open database' in err
+            or 'login failed' in err
+        )
+        if is_access_denied:
             log_activity(
-                f"Archive view permission denied — report will use live data only. "
-                f"To fix this, run in SQL Server: "
-                f"ALTER DATABASE AccessControl SET DB_CHAINING ON; "
-                f"ALTER DATABASE AccessControl_Archival SET DB_CHAINING ON; "
-                f"(Original error: {e})",
+                f"Archive view access denied — report uses live data only. "
+                f"Ask the DBA to grant ReportUser access to the archive database. "
+                f"(Error: {e})",
                 'WARNING'
             )
             return [], {}

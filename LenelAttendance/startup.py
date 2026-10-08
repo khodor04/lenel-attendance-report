@@ -27,7 +27,7 @@ def get_launch_info():
 def is_registered():
     r = subprocess.run(
         ['schtasks', '/query', '/tn', TASK_NAME],
-        capture_output=True
+        capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW,
     )
     return r.returncode == 0
 
@@ -75,7 +75,7 @@ def register():
             fh.write(xml)
         r = subprocess.run(
             ['schtasks', '/create', '/tn', TASK_NAME, '/xml', tmp_path, '/f'],
-            capture_output=True, text=True
+            capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW,
         )
     finally:
         try:
@@ -91,7 +91,7 @@ def register():
 def unregister():
     r = subprocess.run(
         ['schtasks', '/delete', '/tn', TASK_NAME, '/f'],
-        capture_output=True, text=True
+        capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW,
     )
     if r.returncode == 0:
         return True, "Removed from startup."

@@ -1,8 +1,15 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
+import glob as _glob, os as _os
+_sys32 = r'C:\Windows\System32'
+_vc_dlls = ['vcruntime140.dll', 'vcruntime140_1.dll', 'vcruntime140_threads.dll',
+            'msvcp140.dll', 'msvcp140_1.dll', 'msvcp140_2.dll',
+            'msvcp140_atomic_wait.dll', 'msvcp140_codecvt_ids.dll']
+
 datas = [('icon.ico', '.')]
-binaries = []
+binaries = [(_os.path.join(_sys32, dll), '.') for dll in _vc_dlls
+            if _os.path.exists(_os.path.join(_sys32, dll))]
 hiddenimports = ['pyodbc', 'pystray', 'PIL', 'PIL.Image', 'PIL.ImageDraw']
 tmp_ret = collect_all('openpyxl')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]

@@ -221,24 +221,27 @@ class App(tk.Tk):
         elif key == 'profiles': self._tabs['profiles'].refresh()
 
     def _start_scheduler(self):
-        try:
-            import svc_manager
-            if svc_manager.is_running():
-                self._sched_lbl.configure(
-                    text="⏱ Service: Active", fg='#7EC8A0')
-                config.log_activity(
-                    "GUI scheduler skipped — Windows service is active.", "INFO")
-                return
-        except Exception:
-            pass   # svc_manager unavailable; fall through to internal scheduler
+        def _check_and_start():
+            try:
+                import svc_manager
+                if svc_manager.is_running():
+                    self.after(0, lambda: self._sched_lbl.configure(
+                        text="⏱ Service: Active", fg='#7EC8A0'))
+                    config.log_activity(
+                        "GUI scheduler skipped — Windows service is active.", "INFO")
+                    return
+            except Exception:
+                pass
 
-        def status_cb(msg):
-            self._sched_lbl.configure(text=f"⏱ {msg}")
-            self.after(5000, lambda: self._sched_lbl.configure(
-                text="⏱ Scheduler: Running"))
+            def status_cb(msg):
+                self._sched_lbl.configure(text=f"⏱ {msg}")
+                self.after(5000, lambda: self._sched_lbl.configure(
+                    text="⏱ Scheduler: Running"))
 
-        scheduler.set_status_callback(status_cb)
-        scheduler.start()
+            scheduler.set_status_callback(status_cb)
+            scheduler.start()
+
+        threading.Thread(target=_check_and_start, daemon=True).start()
 
     # ── Window close → hide to tray ───────────────────────────────────────────
     def on_close(self):

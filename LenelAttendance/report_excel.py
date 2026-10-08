@@ -82,7 +82,8 @@ _LAST_COL = get_column_letter(_NCOLS)  # 'I'
 
 
 def _write_daily_summary(wb, records: List[AttendanceRecord],
-                          report_title: str, period_start: date, period_end: date):
+                          report_title: str, period_start: date, period_end: date,
+                          include_remarks: bool = True):
     ws = wb.active
     ws.title = "Daily Summary"
     ws.sheet_view.showGridLines = False
@@ -142,7 +143,7 @@ def _write_daily_summary(wb, records: List[AttendanceRecord],
             eff_t,
             tot_t,
             rec.company_name,
-            rec.remarks_str,
+            rec.remarks_str if include_remarks else '',
         ]
         fmts = ['@', None, FMT_DATE, FMT_TIME, FMT_TIME, FMT_HOURS, FMT_HOURS,
                 None, None]
@@ -157,10 +158,11 @@ def _write_daily_summary(wb, records: List[AttendanceRecord],
             if fmt:
                 c.number_format = fmt
 
-        if rec.has_out_2hr:
-            ws.cell(row=row, column=REMARKS_COL).fill = _fill(YELLOW)
-        elif rec.has_any_remark:
-            ws.cell(row=row, column=REMARKS_COL).fill = _fill(LIGHT_RED)
+        if include_remarks:
+            if rec.has_out_2hr:
+                ws.cell(row=row, column=REMARKS_COL).fill = _fill(YELLOW)
+            elif rec.has_any_remark:
+                ws.cell(row=row, column=REMARKS_COL).fill = _fill(LIGHT_RED)
 
         ws.row_dimensions[row].height = 18
 
@@ -173,7 +175,7 @@ def _write_daily_summary(wb, records: List[AttendanceRecord],
 
 # ── Detailed Report sheet ─────────────────────────────────────────────────────
 def _write_detailed_report(wb, records: List[AttendanceRecord], raw_events: list,
-                            reader_map: dict):
+                            reader_map: dict, include_remarks: bool = True):
     """
     raw_events: list of {emp_id, punch_time, reader_type, panelid, readerid}
     reader_map: {(panelid,readerid): readerdesc}
@@ -255,10 +257,11 @@ def _write_detailed_report(wb, records: List[AttendanceRecord], raw_events: list
                 calc_time = _minutes_to_time(mins)
 
             remark = ''
-            if en_ev and not ex_ev:
-                remark = 'Missing Exit Punch'
-            elif ex_ev and not en_ev:
-                remark = 'Missing Entry Punch'
+            if include_remarks:
+                if en_ev and not ex_ev:
+                    remark = 'Missing Exit Punch'
+                elif ex_ev and not en_ev:
+                    remark = 'Missing Entry Punch'
 
             ssno_val = rec.ssno if rec else ''
             company  = rec.company_name if rec else ''
@@ -274,7 +277,7 @@ def _write_detailed_report(wb, records: List[AttendanceRecord], raw_events: list
                 c.alignment = _CENTER if col in (1, 3, 4, 6, 8) else _LEFT
                 if fmt:
                     c.number_format = fmt
-            if remark:
+            if include_remarks and remark:
                 ws.cell(row=data_row, column=REMARKS_COL_DR).fill = _fill(LIGHT_RED)
             ws.row_dimensions[data_row].height = 17
             data_row += 1
@@ -529,11 +532,13 @@ def generate_excel(records: List[AttendanceRecord], report_title: str,
 
     wb = openpyxl.Workbook()
 
-    _write_daily_summary(wb, records, report_title, period_start, period_end)
+    _write_daily_summary(wb, records, report_title, period_start, period_end,
+                         include_remarks=include_remarks)
     _write_summary(wb, records, report_title, period_start, period_end)
 
     if raw_events is not None and reader_map is not None:
-        _write_detailed_report(wb, records, raw_events, reader_map)
+        _write_detailed_report(wb, records, raw_events, reader_map,
+                               include_remarks=include_remarks)
         _write_rawdata(wb, raw_events, records, reader_map)
 
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)

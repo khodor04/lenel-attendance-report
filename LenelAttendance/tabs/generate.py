@@ -70,8 +70,10 @@ class GenerateTab(ttk.Frame):
         fmt_frame.grid(row=r, column=1, columnspan=2, sticky='w', padx=8, pady=4)
         self._excel_var = tk.BooleanVar(value=True)
         self._pdf_var = tk.BooleanVar(value=True)
+        self._remarks_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(fmt_frame, text="Excel (.xlsx)", variable=self._excel_var).pack(side='left')
         ttk.Checkbutton(fmt_frame, text="PDF", variable=self._pdf_var).pack(side='left', padx=12)
+        ttk.Checkbutton(fmt_frame, text="Include Remarks", variable=self._remarks_var).pack(side='left', padx=12)
 
         # Action buttons
         btn_row = ttk.Frame(self)
@@ -189,6 +191,9 @@ class GenerateTab(ttk.Frame):
                             from_date, arch_to)
                         all_events.extend(arch_events)
                         all_emp_info.update(arch_emp_info)
+                        if not arch_events:
+                            self.after(0, lambda: self._status.set(
+                                "Warning: archive data unavailable — report uses live data only."))
                     except Exception as arch_e:
                         arch_msg = f"Archive query failed: {arch_e}"
                         config.log_activity(arch_msg, 'ERROR')
@@ -218,16 +223,20 @@ class GenerateTab(ttk.Frame):
                 xlsx_path = ''
                 pdf_path = ''
 
+                include_remarks = self._remarks_var.get()
+
                 if self._excel_var.get():
                     self.after(0, lambda: self._status.set("Generating Excel…"))
                     xlsx_path = str(Path(folder) / f"{safe}_{date_str}_{ts}.xlsx")
                     report_excel.generate_excel(records, title, from_date, to_date, xlsx_path,
-                                                raw_events=events, reader_map={})
+                                                raw_events=events, reader_map={},
+                                                include_remarks=include_remarks)
 
                 if self._pdf_var.get():
                     self.after(0, lambda: self._status.set("Generating PDF…"))
                     pdf_path = str(Path(folder) / f"{safe}_{date_str}_{ts}.pdf")
-                    report_pdf.generate_pdf(records, title, from_date, to_date, pdf_path)
+                    report_pdf.generate_pdf(records, title, from_date, to_date, pdf_path,
+                                            include_remarks=include_remarks)
 
                 self.after(0, lambda: self._done_ok(records, xlsx_path, pdf_path))
 
