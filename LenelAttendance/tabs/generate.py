@@ -66,6 +66,25 @@ class GenerateTab(ttk.Frame):
         ttk.Button(folder_frame, text="Browse…", command=self._browse_folder).pack(side='left', padx=4)
 
         r += 1
+        ttk.Label(form, text="Filter by Company:").grid(row=r, column=0, sticky='nw', pady=4)
+        co_frame = ttk.Frame(form)
+        co_frame.grid(row=r, column=1, columnspan=2, sticky='w', padx=8, pady=4)
+        self._co_listbox = tk.Listbox(co_frame, selectmode='multiple', height=4, width=36,
+                                       font=('Segoe UI', 9), exportselection=False)
+        co_sb = ttk.Scrollbar(co_frame, orient='vertical', command=self._co_listbox.yview)
+        self._co_listbox.configure(yscrollcommand=co_sb.set)
+        self._co_listbox.pack(side='left')
+        co_sb.pack(side='left', fill='y')
+        co_btn_col = ttk.Frame(co_frame)
+        co_btn_col.pack(side='left', padx=8)
+        ttk.Button(co_btn_col, text="Load", command=self._load_companies, width=8).pack(pady=(0, 3))
+        ttk.Button(co_btn_col, text="All", command=self._select_all_companies, width=8).pack(pady=2)
+        ttk.Button(co_btn_col, text="Clear", command=self._clear_companies, width=8).pack(pady=2)
+        self._co_lbl = ttk.Label(co_btn_col, text="No selection\n= all companies",
+                                  foreground='#888888', font=('Segoe UI', 7), justify='center')
+        self._co_lbl.pack(pady=(4, 0))
+
+        r += 1
         fmt_frame = ttk.Frame(form)
         fmt_frame.grid(row=r, column=1, columnspan=2, sticky='w', padx=8, pady=4)
         self._excel_var = tk.BooleanVar(value=True)
@@ -134,6 +153,28 @@ class GenerateTab(ttk.Frame):
         self._from.delete(0, 'end'); self._from.insert(0, start.isoformat())
         self._to.delete(0, 'end'); self._to.insert(0, today.isoformat())
 
+    def _load_companies(self):
+        self._co_lbl.configure(text="Loading…")
+        def _fetch():
+            try:
+                names = [d['name'] for d in database.get_divisions()]
+            except Exception:
+                names = []
+            self.after(0, lambda: self._populate_companies(names))
+        threading.Thread(target=_fetch, daemon=True).start()
+
+    def _populate_companies(self, names):
+        self._co_listbox.delete(0, 'end')
+        for n in names:
+            self._co_listbox.insert('end', n)
+        self._co_lbl.configure(text=f"{len(names)} loaded\nNo sel = all")
+
+    def _select_all_companies(self):
+        self._co_listbox.select_set(0, 'end')
+
+    def _clear_companies(self):
+        self._co_listbox.selection_clear(0, 'end')
+
     def _browse_folder(self):
         folder = filedialog.askdirectory(title="Select Output Folder")
         if folder:
@@ -158,6 +199,9 @@ class GenerateTab(ttk.Frame):
         if from_date > to_date:
             messagebox.showerror("Date Error", "From date must be before To date.")
             return
+
+        # Read UI state on main thread before spawning worker
+        company_filter = [self._co_listbox.get(i) for i in self._co_listbox.curselection()]
 
         self._records = []
         self._xlsx_path = ''
@@ -202,6 +246,13 @@ class GenerateTab(ttk.Frame):
 
                 events   = all_events
                 emp_info = all_emp_info
+
+                if company_filter:
+                    allowed = set(company_filter)
+                    allowed_emp = {eid for eid, inf in emp_info.items()
+                                   if inf.get('company_name', '') in allowed}
+                    events   = [e for e in events if e['emp_id'] in allowed_emp]
+                    emp_info = {k: v for k, v in emp_info.items() if k in allowed_emp}
 
                 report_dates = []
                 d = from_date

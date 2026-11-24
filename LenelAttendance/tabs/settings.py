@@ -201,6 +201,13 @@ class _EmailSettings(ttk.Frame):
                   foreground='#888888', font=('Segoe UI', 8, 'italic')).grid(
             row=8, column=0, columnspan=2, sticky='w', pady=(8, 0))
 
+        ttk.Separator(f, orient='horizontal').grid(
+            row=9, column=0, columnspan=2, sticky='ew', pady=(12, 8))
+        self._alert_email = row(10, "Missed-Run Alert Email:", 'alert_email')
+        ttk.Label(f, text="Receives an alert when a scheduled report is missed. Comma-separated for multiple. Leave blank to disable.",
+                  foreground='#888888', font=('Segoe UI', 8, 'italic')).grid(
+            row=11, column=0, columnspan=2, sticky='w', pady=(2, 0))
+
     def _toggle_pwd(self):
         self._pwd_visible = not self._pwd_visible
         self._pwd_entry.configure(show='' if self._pwd_visible else '*')
@@ -222,6 +229,7 @@ class _EmailSettings(ttk.Frame):
         config.set_setting('smtp_from', self._from.get().strip())
         tls = '0' if 'None' in self._tls.get() else '1'
         config.set_setting('smtp_use_tls', tls)
+        config.set_setting('alert_email', self._alert_email.get().strip())
         self._status.configure(text="Email settings saved.", foreground='#27AE60')
 
     def _test(self):

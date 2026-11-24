@@ -220,6 +220,97 @@ def _loop():
         time_module.sleep(15)
 
 
+def _last_expected_run(profile: dict):
+    """Returns the datetime of the most recent run that should have occurred."""
+    run_time_str = profile.get('run_time', '00:00')
+    try:
+        h, m = map(int, run_time_str.split(':'))
+    except Exception:
+        return None
+
+    today = date.today()
+    freq  = profile.get('frequency', 'daily')
+
+    if freq == 'daily':
+        d = today - timedelta(days=1)
+        return datetime(d.year, d.month, d.day, h, m)
+
+    elif freq == 'weekly':
+        dow = profile.get('day_of_week', 0)
+        days_back = (today.weekday() - dow) % 7 or 7
+        d = today - timedelta(days=days_back)
+        return datetime(d.year, d.month, d.day, h, m)
+
+    elif freq == 'monthly':
+        dom = profile.get('day_of_month', 1)
+        # Try current month; if not yet reached use previous month
+        try:
+            candidate = datetime(today.year, today.month, dom, h, m)
+            if candidate >= datetime.now():
+                raise ValueError
+            return candidate
+        except (ValueError, OverflowError):
+            first = today.replace(day=1)
+            prev  = first - timedelta(days=1)
+            d     = prev.replace(day=min(dom, prev.day))
+            return datetime(d.year, d.month, d.day, h, m)
+
+    return None
+
+
+def get_missed_date_range(profile: dict):
+    """Returns (start_date, end_date) for the period the profile missed, or (None, None)."""
+    last_expected = _last_expected_run(profile)
+    if last_expected is None:
+        return None, None
+    return get_report_dates(profile, last_expected.date())
+
+
+def _check_missed_runs():
+    """On startup, detect scheduled runs missed while the app was down and send alerts."""
+    try:
+        profiles = config.get_report_profiles()
+        for profile in profiles:
+            if not profile.get('enabled'):
+                continue
+            last_expected = _last_expected_run(profile)
+            if last_expected is None:
+                continue
+
+            last_run_str = profile.get('last_run') or ''
+            if last_run_str:
+                try:
+                    if datetime.fromisoformat(last_run_str) >= last_expected:
+                        continue
+                except Exception:
+                    pass
+
+            name = profile.get('name', 'Unknown')
+            due  = last_expected.strftime('%d-%b-%Y at %H:%M')
+            config.log_activity(
+                f"MISSED: '{name}' was due {due} but app was not running.", 'WARNING')
+
+            recipients = json.loads(profile.get('recipients') or '[]')
+            alert_raw = config.get_setting('alert_email', '').strip()
+            for ae in [e.strip() for e in alert_raw.split(',') if e.strip()]:
+                if ae not in recipients:
+                    recipients = list(recipients) + [ae]
+
+            if recipients:
+                subject = f"MISSED REPORT: {name} — due {due}"
+                body = (
+                    f"This is an automated alert from the Lenel Attendance Report Manager.\n\n"
+                    f"The scheduled report '{name}' was NOT sent because the application "
+                    f"was not running at the scheduled time.\n\n"
+                    f"Scheduled: {due}\n"
+                    f"Frequency: {profile.get('frequency', 'daily').title()}\n\n"
+                    f"Please use the Dashboard → Run Now button to resend it immediately."
+                )
+                emailer.send_report_email(recipients, [], subject, body, [])
+    except Exception as e:
+        config.log_activity(f"Missed-run check error: {e}", 'ERROR')
+
+
 def start():
     global _thread, _running
     if _thread and _thread.is_alive():
@@ -227,6 +318,7 @@ def start():
     _running = True
     _thread = threading.Thread(target=_loop, daemon=True, name='LenelScheduler')
     _thread.start()
+    threading.Thread(target=_check_missed_runs, daemon=True, name='LenelMissedCheck').start()
 
 
 def stop():
