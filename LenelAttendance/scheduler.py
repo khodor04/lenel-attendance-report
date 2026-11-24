@@ -269,6 +269,9 @@ def get_missed_date_range(profile: dict):
 def _check_missed_runs():
     """On startup, detect scheduled runs missed while the app was down and send alerts."""
     try:
+        alert_raw = config.get_setting('alert_email', '').strip()
+        alert_recipients = [e.strip() for e in alert_raw.split(',') if e.strip()]
+
         profiles = config.get_report_profiles()
         for profile in profiles:
             if not profile.get('enabled'):
@@ -285,18 +288,23 @@ def _check_missed_runs():
                 except Exception:
                     pass
 
+            # Avoid duplicate alerts across restarts — skip if already notified for this run
+            notif_key = f"missed_notified_{profile.get('id', '')}"
+            already_notified = config.get_setting(notif_key, '')
+            if already_notified:
+                try:
+                    if datetime.fromisoformat(already_notified) >= last_expected:
+                        continue
+                except Exception:
+                    pass
+
             name = profile.get('name', 'Unknown')
             due  = last_expected.strftime('%d-%b-%Y at %H:%M')
             config.log_activity(
                 f"MISSED: '{name}' was due {due} but app was not running.", 'WARNING')
 
-            recipients = json.loads(profile.get('recipients') or '[]')
-            alert_raw = config.get_setting('alert_email', '').strip()
-            for ae in [e.strip() for e in alert_raw.split(',') if e.strip()]:
-                if ae not in recipients:
-                    recipients = list(recipients) + [ae]
-
-            if recipients:
+            # Only send to alert_email addresses — never to report stakeholders
+            if alert_recipients:
                 subject = f"MISSED REPORT: {name} — due {due}"
                 body = (
                     f"This is an automated alert from the Lenel Attendance Report Manager.\n\n"
@@ -306,7 +314,11 @@ def _check_missed_runs():
                     f"Frequency: {profile.get('frequency', 'daily').title()}\n\n"
                     f"Please use the Dashboard → Run Now button to resend it immediately."
                 )
-                emailer.send_report_email(recipients, [], subject, body, [])
+                emailer.send_report_email(alert_recipients, [], subject, body, [])
+
+            # Mark as notified so restarts don't re-send
+            config.set_setting(notif_key, last_expected.isoformat())
+
     except Exception as e:
         config.log_activity(f"Missed-run check error: {e}", 'ERROR')
 
