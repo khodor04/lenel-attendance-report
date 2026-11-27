@@ -71,10 +71,19 @@ def install():
     migrate_to_machine_dpapi()
     exe = _svc_exe()
     if exe:
-        return _run(exe, 'install')
-    # Dev mode: use python svc.py
-    svc_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'svc.py')
-    return _run(sys.executable, svc_script, 'install')
+        ok, msg = _run(exe, 'install')
+    else:
+        # Dev mode: use python svc.py
+        svc_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'svc.py')
+        ok, msg = _run(sys.executable, svc_script, 'install')
+
+    if ok:
+        # Auto-restart on failure: 3 retries at 60-second intervals, reset counter after 24 h
+        _run('sc', 'failure', SVC_NAME,
+             'reset=', '86400',
+             'actions=', 'restart/60000/restart/60000/restart/60000')
+
+    return ok, msg
 
 
 def uninstall():
